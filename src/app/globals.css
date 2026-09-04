@@ -1,26 +1,366 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-utility);
+  --font-heading: var(--font-display);
+
+  /* Paleta da marca — disponível como utilitário Tailwind direto
+     (bg-kraft-100, text-manjericao-600, etc.), além dos slots semânticos
+     do shadcn acima. */
+  --color-tinta-900: var(--tinta-900);
+  --color-papel-50: var(--papel-50);
+  --color-kraft-100: var(--kraft-100);
+  --color-pimenta-500: var(--pimenta-500);
+  --color-mostarda-400: var(--mostarda-400);
+  --color-manjericao-600: var(--manjericao-600);
+
+  /* Sistema de tema da loja pública (/[slug]) — dinâmico por restaurante.
+     Estes tokens são sobrescritos via style inline no root da página
+     (buildThemeVars em lib/theme.ts); os valores em :root abaixo são só um
+     fallback escuro seguro. bg-primary/text-muted/border-border já existem
+     acima (compartilhados com o painel) e também respondem a esse override
+     localmente, sem afetar o resto do app. */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-primarysoft: var(--primary-soft);
+  --color-content: var(--text);
+  --color-success: var(--success);
+  --color-line: var(--border);
+  --color-onprimary: var(--on-primary);
+  --color-onmedia: var(--on-media);
+  --color-onbg: var(--on-bg);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  /* Paleta da marca — painel claro e calmo (seção 43: "a interface do
+     restaurante deve ser clara"). O lado gastronômico (kraft/mostarda em
+     mais peso) entra no cardápio público, fases seguintes. */
+  --tinta-900: #24201c;
+  --papel-50: #faf8f4;
+  --kraft-100: #efe6d8;
+  --pimenta-500: #d14526;
+  --mostarda-400: #e8a33d;
+  --manjericao-600: #3e7052;
+
+  --background: var(--papel-50);
+  --foreground: var(--tinta-900);
+  --card: #ffffff;
+  --card-foreground: var(--tinta-900);
+  --popover: #ffffff;
+  --popover-foreground: var(--tinta-900);
+  --primary: var(--pimenta-500);
+  --primary-foreground: #ffffff;
+  --secondary: var(--kraft-100);
+  --secondary-foreground: var(--tinta-900);
+  --muted: #f0ece5;
+  --muted-foreground: #6b6259;
+  --accent: #fbefdc;
+  --accent-foreground: var(--tinta-900);
+  --destructive: #c23b2e;
+  --destructive-foreground: #ffffff;
+  --border: #e4ded3;
+  --input: #e4ded3;
+  --ring: var(--pimenta-500);
+  --chart-1: var(--pimenta-500);
+  --chart-2: var(--manjericao-600);
+  --chart-3: var(--mostarda-400);
+  --chart-4: #6b6259;
+  --chart-5: var(--tinta-900);
+  --radius: 0.75rem;
+  --sidebar: #ffffff;
+  --sidebar-foreground: var(--tinta-900);
+  --sidebar-primary: var(--pimenta-500);
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fbefdc;
+  --sidebar-accent-foreground: var(--tinta-900);
+  --sidebar-border: #e4ded3;
+  --sidebar-ring: var(--pimenta-500);
+
+  /* Fallback do tema da loja pública — usado só se uma página em /[slug]
+     for renderizada sem passar por buildThemeVars(). Mesmos valores padrão
+     da migration (escuro + laranja). */
+  --bg: #0b0b0c;
+  --surface: #161618;
+  --surface-2: #202024;
+  --primary-soft: #ffb05c;
+  --text: #ffffff;
+  --success: #22c55e;
+  --on-primary: #0b0b0c;
+  --on-bg: #ffffff;
+  /* Fixa, não depende do tema: cor de ícone/logo sobre foto/vídeo de capa.
+     Nunca usar --text aqui — um tema claro deixaria os ícones invisíveis
+     sobre a mídia. */
+  --on-media: #ffffff;
+}
+
+.dark {
+  --tinta-900: #24201c;
+  --papel-50: #faf8f4;
+  --kraft-100: #efe6d8;
+  --pimenta-500: #e4572e;
+  --mostarda-400: #e8a33d;
+  --manjericao-600: #4f9670;
+
+  --background: #1c1815;
+  --foreground: var(--papel-50);
+  --card: #262019;
+  --card-foreground: var(--papel-50);
+  --popover: #262019;
+  --popover-foreground: var(--papel-50);
+  --primary: var(--pimenta-500);
+  --primary-foreground: #1c1815;
+  --secondary: #332b23;
+  --secondary-foreground: var(--papel-50);
+  --muted: #2c2620;
+  --muted-foreground: #ab9f91;
+  --accent: #3a2f22;
+  --accent-foreground: var(--papel-50);
+  --destructive: #e4572e;
+  --destructive-foreground: #1c1815;
+  --border: #3a332b;
+  --input: #3a332b;
+  --ring: var(--pimenta-500);
+  --chart-1: var(--pimenta-500);
+  --chart-2: var(--manjericao-600);
+  --chart-3: var(--mostarda-400);
+  --chart-4: #ab9f91;
+  --chart-5: var(--papel-50);
+  --sidebar: #262019;
+  --sidebar-foreground: var(--papel-50);
+  --sidebar-primary: var(--pimenta-500);
+  --sidebar-primary-foreground: #1c1815;
+  --sidebar-accent: #3a2f22;
+  --sidebar-accent-foreground: var(--papel-50);
+  --sidebar-border: #3a332b;
+  --sidebar-ring: var(--pimenta-500);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+    scroll-behavior: smooth;
+  }
+  body {
+    overscroll-behavior-y: none;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Chama animada de "Mais pedidos" (FlameIcon) — mantida como keyframes CSS
+   puros, não JS, e desligada por completo com prefers-reduced-motion. */
+@keyframes flame-flicker {
+  0% {
+    transform: scaleY(1) scaleX(1) rotate(-1deg) translateY(0);
+  }
+  25% {
+    transform: scaleY(1.08) scaleX(0.96) rotate(1.5deg) translateY(-1px);
+  }
+  50% {
+    transform: scaleY(0.96) scaleX(1.04) rotate(-1.5deg) translateY(0.5px);
+  }
+  75% {
+    transform: scaleY(1.05) scaleX(0.98) rotate(1deg) translateY(-0.5px);
+  }
+  100% {
+    transform: scaleY(1) scaleX(1) rotate(-1deg) translateY(0);
+  }
+}
+
+@keyframes flame-glow {
+  0%,
+  100% {
+    opacity: 0.28;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.12);
+  }
+}
+
+.flame-outer {
+  transform-origin: bottom center;
+  animation: flame-flicker 1.6s ease-in-out infinite;
+}
+
+.flame-inner {
+  transform-origin: bottom center;
+  animation: flame-flicker 1.25s ease-in-out infinite;
+  animation-delay: -0.35s;
+}
+
+.flame-glow {
+  animation: flame-glow 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flame-outer,
+  .flame-inner,
+  .flame-glow {
+    animation: none;
+  }
+}
+
+/* Badge do carrinho (header e bottom nav) entrando com um leve "pop". */
+@keyframes badge-pop {
+  0% {
+    transform: scale(0.5);
+  }
+  70% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.badge-pop {
+  animation: badge-pop 150ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-pop {
+    animation: none;
+  }
+}
+
+/* Anel do painel de urgência (UrgencyClock): esvazia 1s linear por tick, e
+   pulsa devagar nos últimos 15 minutos. */
+.urgency-ring-progress {
+  transition: stroke-dashoffset 1s linear;
+}
+
+@keyframes urgency-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+.urgency-ring-pulse {
+  animation: urgency-pulse 2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .urgency-ring-progress {
+    transition: none;
+  }
+  .urgency-ring-pulse {
+    animation: none;
+  }
+}
+
+/* Barra de frete grátis (ShippingProgress): brilho de comemoração que passa
+   UMA vez quando o cliente atinge o valor — nunca repete a cada re-render. */
+@keyframes shipping-glow-once {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.shipping-glow-once {
+  animation: shipping-glow-once 400ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shipping-glow-once {
+    animation: none;
+  }
+}
+
+/* StickyCartBar: entra deslizando de baixo quando o 1º item cai no
+   carrinho. */
+@keyframes sticky-cart-bar-in {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.sticky-cart-bar-in {
+  animation: sticky-cart-bar-in 250ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sticky-cart-bar-in {
+    animation: none;
+  }
 }
