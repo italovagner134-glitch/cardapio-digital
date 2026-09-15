@@ -11,9 +11,10 @@ import type { Product, Promotion } from "@/types/store";
 interface SearchPageContentProps {
   allProducts: Product[];
   promotionByProductId: Map<string, Promotion>;
+  orderingDisabled: boolean;
 }
 
-export function SearchPageContent({ allProducts, promotionByProductId }: SearchPageContentProps) {
+export function SearchPageContent({ allProducts, promotionByProductId, orderingDisabled }: SearchPageContentProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -65,7 +66,12 @@ export function SearchPageContent({ allProducts, promotionByProductId }: SearchP
       ) : (
         <div className="mt-5 grid grid-cols-2 gap-3 px-4">
           {results.map((product) => (
-            <ProductCard key={product.id} product={product} promotion={promotionByProductId.get(product.id)} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              promotion={promotionByProductId.get(product.id)}
+              orderingDisabled={orderingDisabled}
+            />
           ))}
         </div>
       )}

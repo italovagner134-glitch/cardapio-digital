@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ImageOff, Plus } from "lucide-react";
@@ -26,6 +27,7 @@ export function ProductListCard({ product, orderingDisabled = false, promotion }
   const router = useRouter();
   const { slug } = useStoreRef();
   const cart = useCart();
+  const [imageBroken, setImageBroken] = useState(false);
 
   const pricing = getProductPricing(product.price_cents, promotion);
   const hasRequiredGroup = product.product_option_groups.some((group) => group.min_select > 0);
@@ -74,8 +76,15 @@ export function ProductListCard({ product, orderingDisabled = false, promotion }
       className="flex w-full gap-3 border-b border-line px-4 py-3 text-left last:border-b-0"
     >
       <div className="relative size-[88px] shrink-0 overflow-hidden rounded-xl bg-surface2">
-        {product.image_url ? (
-          <Image src={product.image_url} alt={product.name} fill sizes="88px" className="object-cover" />
+        {product.image_url && !imageBroken ? (
+          <Image
+            src={product.image_url}
+            alt={product.name}
+            fill
+            sizes="88px"
+            className="object-cover"
+            onError={() => setImageBroken(true)}
+          />
         ) : (
           <div className="flex size-full items-center justify-center text-muted">
             <ImageOff size={22} aria-hidden="true" />
@@ -108,7 +117,7 @@ export function ProductListCard({ product, orderingDisabled = false, promotion }
                 ? `Escolher opções de ${product.name}`
                 : `Adicionar ${product.name} ao carrinho`
           }
-          className="group flex size-8 items-center justify-center rounded-full bg-primary text-onprimary shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-transform duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+          className="group flex size-11 items-center justify-center rounded-full bg-primary text-onprimary shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-transform duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
         >
           <Plus size={18} aria-hidden="true" className="transition-transform duration-150 group-active:rotate-90" />
         </button>

@@ -25,6 +25,7 @@ export default async function CartPage({ params }: PageProps) {
       storeName={bundle.store.name}
       storeWhatsapp={bundle.store.whatsapp}
       minOrderCents={bundle.settings?.min_order_cents ?? 0}
+      deliveryFeeCents={bundle.settings?.delivery_fee_cents ?? 0}
     />
   );
 }

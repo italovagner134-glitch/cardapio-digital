@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Settings, ExternalLink } from "lucide-react";
+import { Settings, ExternalLink, Tag } from "lucide-react";
 import { Greeting } from "./Greeting";
 import { OpenStatusBadge } from "./OpenStatusBadge";
 import { OnboardingChecklist } from "./OnboardingChecklist";
@@ -47,6 +47,13 @@ export function DashboardShell({
         />
 
         <div className="flex flex-wrap gap-3">
+          <Link
+            href="/app/promocoes"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:bg-accent"
+          >
+            <Tag className="size-4" aria-hidden="true" />
+            Promoções
+          </Link>
           <Link
             href="/app/configuracoes"
             className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-sm text-card-foreground hover:bg-accent"

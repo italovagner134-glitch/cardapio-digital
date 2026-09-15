@@ -66,7 +66,9 @@ export default function OrdersPage() {
               </ul>
 
               <div className="mt-3 flex items-center justify-between border-t border-line pt-3">
-                <p className="text-sm font-bold text-content">{formatBRL(order.subtotalCents)}</p>
+                <p className="text-sm font-bold text-content">
+                  {formatBRL(order.subtotalCents + (order.deliveryFeeCents ?? 0))}
+                </p>
                 <button
                   type="button"
                   onClick={() => handleReorder(order.id)}

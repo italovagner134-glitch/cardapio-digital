@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ImageOff, Plus } from "lucide-react";
@@ -27,6 +28,10 @@ export function ProductCard({ product, priority = false, orderingDisabled = fals
   const router = useRouter();
   const { slug } = useStoreRef();
   const cart = useCart();
+  // M4: URL de imagem quebrada (arquivo removido do storage, link externo
+  // caído) mostrava o ícone padrão do navegador em vez do placeholder do
+  // app — este estado troca pro mesmo fallback já usado quando não há URL.
+  const [imageBroken, setImageBroken] = useState(false);
 
   const pricing = getProductPricing(product.price_cents, promotion);
   const hasRequiredGroup = product.product_option_groups.some((group) => group.min_select > 0);
@@ -91,7 +96,7 @@ export function ProductCard({ product, priority = false, orderingDisabled = fals
       style={{ width: "44vw", minWidth: 150, maxWidth: 180 }}
     >
       <div className="relative aspect-square w-full bg-surface2">
-        {product.image_url ? (
+        {product.image_url && !imageBroken ? (
           <Image
             src={product.image_url}
             alt={product.name}
@@ -99,6 +104,7 @@ export function ProductCard({ product, priority = false, orderingDisabled = fals
             priority={priority}
             sizes="180px"
             className="object-cover"
+            onError={() => setImageBroken(true)}
           />
         ) : (
           <div className="flex size-full items-center justify-center text-muted">
@@ -128,7 +134,7 @@ export function ProductCard({ product, priority = false, orderingDisabled = fals
                 ? `Escolher opções de ${product.name}`
                 : `Adicionar ${product.name} ao carrinho`
           }
-          className="group absolute bottom-3 right-3 flex size-8 items-center justify-center rounded-full bg-primary text-onprimary shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-transform duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
+          className="group absolute bottom-3 right-3 flex size-11 items-center justify-center rounded-full bg-primary text-onprimary shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-transform duration-150 active:scale-90 disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100"
         >
           <Plus
             size={18}

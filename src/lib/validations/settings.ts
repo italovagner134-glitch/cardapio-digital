@@ -12,6 +12,7 @@ export const restaurantSettingsSchema = z
     acceptsPickup: z.boolean(),
     acceptsDinein: z.boolean(),
     minOrderCents: z.coerce.number().int().min(0),
+    deliveryFeeCents: z.coerce.number().int().min(0),
     deliveryTimeMin: z.coerce.number().int().min(0).optional(),
     deliveryTimeMax: z.coerce.number().int().min(0).optional(),
     paymentMethods: z.array(z.enum(["dinheiro", "pix", "cartao_entrega"])),

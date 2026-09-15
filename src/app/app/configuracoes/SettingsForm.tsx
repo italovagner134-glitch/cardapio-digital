@@ -62,6 +62,14 @@ export function SettingsForm({ settings }: SettingsFormProps) {
             />
           </div>
           <div className="flex flex-col gap-2">
+            <Label htmlFor="deliveryFee">Taxa de entrega</Label>
+            <CurrencyInput
+              id="deliveryFee"
+              name="deliveryFeeCents"
+              defaultValueCents={settings?.delivery_fee_cents ?? 0}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
             <Label htmlFor="deliveryTimeMin">Entrega em (min)</Label>
             <Input
               id="deliveryTimeMin"

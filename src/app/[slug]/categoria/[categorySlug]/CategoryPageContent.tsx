@@ -26,6 +26,7 @@ interface CategoryPageContentProps {
   initialProducts: Product[];
   total: number;
   promotionByProductId: Map<string, Promotion>;
+  orderingDisabled: boolean;
 }
 
 export function CategoryPageContent({
@@ -34,6 +35,7 @@ export function CategoryPageContent({
   initialProducts,
   total,
   promotionByProductId,
+  orderingDisabled,
 }: CategoryPageContentProps) {
   const router = useRouter();
   const { slug } = useStoreRef();
@@ -146,13 +148,23 @@ export function CategoryPageContent({
       ) : category.display_style === "carousel" ? (
         <div className="grid grid-cols-2 gap-3 px-4">
           {products.map((product) => (
-            <ProductCard key={product.id} product={product} promotion={promotionByProductId.get(product.id)} />
+            <ProductCard
+              key={product.id}
+              product={product}
+              promotion={promotionByProductId.get(product.id)}
+              orderingDisabled={orderingDisabled}
+            />
           ))}
         </div>
       ) : (
         <div className="mx-4 overflow-hidden rounded-2xl border border-line bg-surface">
           {products.map((product) => (
-            <ProductListCard key={product.id} product={product} promotion={promotionByProductId.get(product.id)} />
+            <ProductListCard
+              key={product.id}
+              product={product}
+              promotion={promotionByProductId.get(product.id)}
+              orderingDisabled={orderingDisabled}
+            />
           ))}
         </div>
       )}

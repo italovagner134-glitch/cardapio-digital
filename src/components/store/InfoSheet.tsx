@@ -75,6 +75,7 @@ export function InfoSheet({
   const [directionsSheetOpen, setDirectionsSheetOpen] = useState(false);
   const dragStartY = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [logoBroken, setLogoBroken] = useState(false);
 
   if (!open) return null;
 
@@ -139,13 +140,14 @@ export function InfoSheet({
         <div className="overflow-y-auto pb-8">
           {/* 4.1 — Cabeçalho */}
           <div className="flex items-center gap-3 px-6 pb-4 pt-2">
-            {store.logo_url ? (
+            {store.logo_url && !logoBroken ? (
               <Image
                 src={store.logo_url}
                 alt=""
                 width={40}
                 height={40}
                 className="size-10 shrink-0 rounded-full object-cover"
+                onError={() => setLogoBroken(true)}
               />
             ) : (
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface2 text-sm font-bold text-muted">
@@ -256,6 +258,12 @@ export function InfoSheet({
                     <span>
                       {settings.delivery_time_min}–{settings.delivery_time_max} min
                     </span>
+                  </li>
+                )}
+                {settings.accepts_delivery && settings.delivery_fee_cents > 0 && (
+                  <li className="flex justify-between">
+                    <span className="text-muted">Taxa de entrega</span>
+                    <span>{formatBRL(settings.delivery_fee_cents)}</span>
                   </li>
                 )}
                 {settings.accepts_delivery && settings.min_order_cents > 0 && (

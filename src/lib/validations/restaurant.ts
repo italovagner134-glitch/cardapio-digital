@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
+export const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /**
  * Simplificação intencional da Fase 1: um único intervalo por dia da semana

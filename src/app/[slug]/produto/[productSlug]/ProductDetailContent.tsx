@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ImageOff, Minus, Plus } from "lucide-react";
 import { SolidHeader } from "@/components/store/SolidHeader";
+import { ShareButton } from "@/components/store/ShareButton";
 import { formatBRL } from "@/lib/format";
 import { getProductPricing } from "@/lib/promotions";
 import { routes } from "@/lib/routes";
@@ -35,6 +36,7 @@ export function ProductDetailContent({ product, promotion, orderingDisabled }: P
   const [selections, setSelections] = useState<Record<string, string[]>>({});
   const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imageBroken, setImageBroken] = useState(false);
 
   const groups = [...product.product_option_groups].sort((a, b) => a.sort_order - b.sort_order);
   const pricing = getProductPricing(product.price_cents, promotion);
@@ -110,11 +112,30 @@ export function ProductDetailContent({ product, promotion, orderingDisabled }: P
 
   return (
     <div>
-      <SolidHeader title={product.name} onBack={() => router.back()} />
+      <SolidHeader
+        title={product.name}
+        onBack={() => router.back()}
+        actions={
+          <ShareButton
+            path={routes.product(slug, product.slug)}
+            title={product.name}
+            text={product.description ?? undefined}
+            className="flex size-10 shrink-0 items-center justify-center rounded-full text-content transition-transform duration-150 active:scale-90"
+          />
+        }
+      />
 
       <div className="relative aspect-square w-full bg-surface2">
-        {product.image_url ? (
-          <Image src={product.image_url} alt={product.name} fill sizes="480px" priority className="object-cover" />
+        {product.image_url && !imageBroken ? (
+          <Image
+            src={product.image_url}
+            alt={product.name}
+            fill
+            sizes="480px"
+            priority
+            className="object-cover"
+            onError={() => setImageBroken(true)}
+          />
         ) : (
           <div className="flex size-full items-center justify-center text-muted">
             <ImageOff size={40} aria-hidden="true" />
@@ -155,7 +176,12 @@ export function ProductDetailContent({ product, promotion, orderingDisabled }: P
                 {group.max_select > 1 ? ` · até ${group.max_select}` : ""}
               </span>
             </div>
-            <div className="flex flex-col gap-1.5">
+            <div
+              className="flex flex-col gap-1.5"
+              role={group.max_select === 1 ? "radiogroup" : "group"}
+              aria-label={group.name}
+              aria-required={group.is_required}
+            >
               {group.product_options
                 .filter((option) => option.is_available)
                 .map((option) => {
@@ -164,6 +190,8 @@ export function ProductDetailContent({ product, promotion, orderingDisabled }: P
                     <button
                       key={option.id}
                       type="button"
+                      role={group.max_select === 1 ? "radio" : "checkbox"}
+                      aria-checked={selected}
                       onClick={() => toggleOption(group.id, option.id, group.max_select)}
                       className={`flex items-center justify-between rounded-xl border px-3 py-2.5 text-left text-sm transition-colors ${
                         selected ? "border-primary bg-primary/10" : "border-line"
@@ -177,7 +205,11 @@ export function ProductDetailContent({ product, promotion, orderingDisabled }: P
                   );
                 })}
             </div>
-            {errors[group.id] && <p className="text-xs text-red-500">{errors[group.id]}</p>}
+            {errors[group.id] && (
+              <p role="alert" className="text-xs text-destructive">
+                {errors[group.id]}
+              </p>
+            )}
           </div>
         ))}
 

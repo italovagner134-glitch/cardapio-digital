@@ -41,6 +41,8 @@ function parseCategoryForm(formData: FormData) {
   return categorySchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description"),
+    iconKey: formData.get("iconKey"),
+    displayStyle: formData.get("displayStyle"),
   });
 }
 
@@ -55,11 +57,14 @@ export async function createCategory(
     return { error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
   }
 
+  // `position` é a ordem que a loja pública usa de verdade (getStoreCategories
+  // ordena por ela); `sort_order` é uma coluna legada que ninguém mais lê no
+  // lado público — categoria nova entra no fim da lista visível de verdade.
   const { data: last } = await supabase
     .from("categories")
-    .select("sort_order")
+    .select("position")
     .eq("restaurant_id", restaurant.id)
-    .order("sort_order", { ascending: false })
+    .order("position", { ascending: false })
     .limit(1)
     .maybeSingle();
 
@@ -70,7 +75,9 @@ export async function createCategory(
     name: parsed.data.name,
     slug,
     description: parsed.data.description || null,
-    sort_order: (last?.sort_order ?? -1) + 1,
+    icon_key: parsed.data.iconKey,
+    display_style: parsed.data.displayStyle,
+    position: (last?.position ?? -1) + 1,
   });
 
   if (error) {
@@ -101,7 +108,12 @@ export async function updateCategory(
 
   const { error } = await supabase
     .from("categories")
-    .update({ name: parsed.data.name, description: parsed.data.description || null })
+    .update({
+      name: parsed.data.name,
+      description: parsed.data.description || null,
+      icon_key: parsed.data.iconKey,
+      display_style: parsed.data.displayStyle,
+    })
     .eq("id", categoryId)
     .eq("restaurant_id", restaurant.id);
 
@@ -138,16 +150,36 @@ export async function toggleCategoryActive(categoryId: string, nextValue: boolea
     .eq("restaurant_id", restaurant.id);
 
   revalidatePath("/app/categorias");
+  revalidatePath("/app");
+}
+
+/** "Ocultar" (is_visible) é diferente de "desativar" (is_active, acima):
+ * oculta só sai da régua/home pública — o link direto continua respondendo
+ * (ver getCategoryBySlug). Desativar é exclusão de fato. */
+export async function toggleCategoryVisible(categoryId: string, nextValue: boolean) {
+  const { supabase, restaurant } = await requireRestaurant();
+
+  await supabase
+    .from("categories")
+    .update({ is_visible: nextValue })
+    .eq("id", categoryId)
+    .eq("restaurant_id", restaurant.id);
+
+  revalidatePath("/app/categorias");
+  revalidatePath("/app");
 }
 
 export async function moveCategory(categoryId: string, direction: "up" | "down") {
   const { supabase, restaurant } = await requireRestaurant();
 
+  // `position`, não `sort_order` — é a coluna que a loja pública lê de
+  // verdade (getStoreCategories); reordenar aqui sem mexer em `position` não
+  // tinha efeito nenhum na régua/home do cliente.
   const { data: categories } = await supabase
     .from("categories")
-    .select("id, sort_order")
+    .select("id, position")
     .eq("restaurant_id", restaurant.id)
-    .order("sort_order", { ascending: true });
+    .order("position", { ascending: true });
 
   if (!categories) return;
 
@@ -160,9 +192,10 @@ export async function moveCategory(categoryId: string, direction: "up" | "down")
   const swap = categories[swapIndex];
 
   await Promise.all([
-    supabase.from("categories").update({ sort_order: swap.sort_order }).eq("id", current.id),
-    supabase.from("categories").update({ sort_order: current.sort_order }).eq("id", swap.id),
+    supabase.from("categories").update({ position: swap.position }).eq("id", current.id),
+    supabase.from("categories").update({ position: current.position }).eq("id", swap.id),
   ]);
 
   revalidatePath("/app/categorias");
+  revalidatePath("/app");
 }

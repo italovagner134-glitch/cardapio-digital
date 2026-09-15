@@ -13,12 +13,16 @@ interface SolidHeaderProps {
    * onBack, mostra seta de voltar — telas que vieram de outra (categoria,
    * produto). */
   onBack?: () => void;
+  /** Slot opcional entre o título e o carrinho — hoje só o ShareButton do
+   * Detalhe do produto usa isto; toda outra tela que já chama SolidHeader
+   * continua igual sem passar nada aqui. */
+  actions?: React.ReactNode;
 }
 
 /** Header sólido, sticky (não flutuante sobre mídia) — usado por toda rota
  * que não é a home (Parte 2.2: "Header sólido com botão voltar, nome da
  * categoria e carrinho"). A home usa StoreHeader, que fica sobre a capa. */
-export function SolidHeader({ title, onBack }: SolidHeaderProps) {
+export function SolidHeader({ title, onBack, actions }: SolidHeaderProps) {
   const { slug } = useStoreRef();
   const { openMenu } = useStoreOverlays();
   const cart = useCart();
@@ -38,6 +42,8 @@ export function SolidHeader({ title, onBack }: SolidHeaderProps) {
       </button>
 
       <h1 className="min-w-0 flex-1 truncate text-base font-bold text-content">{title}</h1>
+
+      {actions}
 
       <Link
         href={routes.cart(slug)}

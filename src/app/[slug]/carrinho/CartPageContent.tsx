@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
@@ -19,11 +19,39 @@ interface CartPageContentProps {
   storeName: string;
   storeWhatsapp: string | null;
   minOrderCents: number;
+  deliveryFeeCents: number;
 }
 
 const UNDO_MS = 5000;
 
-export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: CartPageContentProps) {
+/** Aplica os preços/disponibilidade revalidados no carrinho local. Retorna
+ * true se algo mudou. Compartilhado entre a revalidação de entrada
+ * (silenciosa) e a do clique em "Fechar pedido" (bloqueante). Função pura de
+ * módulo (não fecha sobre nada do componente) — assim não entra na lista de
+ * deps do useEffect que a chama. */
+function applyPriceChecks(cart: ReturnType<typeof useCart>, checks: Awaited<ReturnType<typeof checkCartPrices>>): boolean {
+  const byId = new Map(checks.map((check) => [check.productId, check]));
+  let changed = false;
+
+  for (const item of cart.items) {
+    const check = byId.get(item.productId);
+    if (!check || !check.exists || !check.available) {
+      cart.removeItem(item.lineId);
+      changed = true;
+      continue;
+    }
+    const newUnitPrice = check.currentProductPriceCents + item.optionsTotalCents;
+    if (newUnitPrice !== item.unitPriceCents || check.currentPromotionId !== item.promotionId) {
+      cart.updateQuantity(item.lineId, 0);
+      cart.addItem({ ...item, unitPriceCents: newUnitPrice, promotionId: check.currentPromotionId });
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
+export function CartPageContent({ storeName, storeWhatsapp, minOrderCents, deliveryFeeCents }: CartPageContentProps) {
   const router = useRouter();
   const { restaurantId, slug } = useStoreRef();
   const cart = useCart();
@@ -36,6 +64,7 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
   // toda à toa a cada remoção.
   const undoTimeouts = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const revalidated = useRef(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Revalida preço/disponibilidade no servidor uma vez ao entrar no
   // carrinho (não a cada render) — critério de aceite: "revalidado no
@@ -47,27 +76,17 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
     revalidated.current = true;
 
     const productIds = cart.items.map((item) => item.productId);
-    checkCartPrices(restaurantId, productIds).then((checks) => {
-      const byId = new Map(checks.map((check) => [check.productId, check]));
-      let changed = false;
-
-      for (const item of cart.items) {
-        const check = byId.get(item.productId);
-        if (!check || !check.exists || !check.available) {
-          cart.removeItem(item.lineId);
-          changed = true;
-          continue;
-        }
-        const newUnitPrice = check.currentProductPriceCents + item.optionsTotalCents;
-        if (newUnitPrice !== item.unitPriceCents || check.currentPromotionId !== item.promotionId) {
-          cart.updateQuantity(item.lineId, 0);
-          cart.addItem({ ...item, unitPriceCents: newUnitPrice, promotionId: check.currentPromotionId });
-          changed = true;
-        }
-      }
-
-      if (changed) toast("Alguns preços foram atualizados", { description: "Confira o carrinho antes de fechar o pedido." });
-    });
+    checkCartPrices(restaurantId, productIds)
+      .then((checks) => {
+        const changed = applyPriceChecks(cart, checks);
+        if (changed) toast("Alguns preços foram atualizados", { description: "Confira o carrinho antes de fechar o pedido." });
+      })
+      .catch(() => {
+        // Falha de rede/Supabase na revalidação de entrada: não bloqueia a
+        // tela (o carrinho segue com o preço salvo), mas o clique em
+        // "Fechar pedido" tenta revalidar de novo (ver handleCheckout) — só
+        // lá, se falhar outra vez, o pedido é barrado de verdade (G3+B1).
+      });
   }, [cart, restaurantId]);
 
   function handleRemove(item: CartItem) {
@@ -87,16 +106,40 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
     });
   }
 
-  function handleCheckout() {
-    if (cart.items.length === 0) return;
+  async function handleCheckout() {
+    if (cart.items.length === 0 || isCheckingOut) return;
 
     if (!storeWhatsapp) {
       toast.error("Loja sem WhatsApp cadastrado para receber pedidos.");
       return;
     }
 
-    const message = buildOrderMessage(storeName, cart.items, cart.subtotalCents, profile);
-    orders.save({ items: cart.items, subtotalCents: cart.subtotalCents });
+    setIsCheckingOut(true);
+    try {
+      // Revalida no servidor NO INSTANTE do clique (B1) — a revalidação de
+      // entrada, acima, só cobre o momento em que a tela abriu; se a pessoa
+      // ficar um tempo no carrinho (promoção expira, produto esgota, dono
+      // muda preço), esta é a checagem que impede o preço errado de ir pro
+      // WhatsApp. Sem isso, o pedido saía 100% do que estava no localStorage.
+      const productIds = cart.items.map((item) => item.productId);
+      const checks = await checkCartPrices(restaurantId, productIds);
+      const changed = applyPriceChecks(cart, checks);
+
+      if (changed) {
+        toast("Alguns preços mudaram e o carrinho foi atualizado", {
+          description: "Confira antes de fechar o pedido de novo.",
+        });
+        return;
+      }
+    } catch {
+      toast.error("Não foi possível confirmar o pedido agora. Tente de novo.");
+      return;
+    } finally {
+      setIsCheckingOut(false);
+    }
+
+    const message = buildOrderMessage(storeName, cart.items, cart.subtotalCents, profile, deliveryFeeCents);
+    orders.save({ items: cart.items, subtotalCents: cart.subtotalCents, deliveryFeeCents });
     cart.clear();
     window.open(buildWhatsAppContactUrl(storeWhatsapp, message), "_blank", "noopener,noreferrer");
     router.push(routes.orders(slug));
@@ -140,7 +183,7 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
                         type="button"
                         onClick={() => cart.updateQuantity(item.lineId, item.quantity - 1)}
                         aria-label="Diminuir quantidade"
-                        className="flex size-7 items-center justify-center rounded-full border border-line text-content"
+                        className="flex size-11 items-center justify-center rounded-full border border-line text-content"
                       >
                         <Minus size={14} aria-hidden="true" />
                       </button>
@@ -149,7 +192,7 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
                         type="button"
                         onClick={() => cart.updateQuantity(item.lineId, item.quantity + 1)}
                         aria-label="Aumentar quantidade"
-                        className="flex size-7 items-center justify-center rounded-full border border-line text-content"
+                        className="flex size-11 items-center justify-center rounded-full border border-line text-content"
                       >
                         <Plus size={14} aria-hidden="true" />
                       </button>
@@ -175,9 +218,15 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
               <span>Subtotal</span>
               <span>{formatBRL(cart.subtotalCents)}</span>
             </div>
+            {deliveryFeeCents > 0 && (
+              <div className="flex justify-between text-muted">
+                <span>Taxa de entrega</span>
+                <span>{formatBRL(deliveryFeeCents)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-base font-bold text-content">
               <span>Total</span>
-              <span>{formatBRL(cart.subtotalCents)}</span>
+              <span>{formatBRL(cart.subtotalCents + deliveryFeeCents)}</span>
             </div>
           </div>
 
@@ -191,10 +240,10 @@ export function CartPageContent({ storeName, storeWhatsapp, minOrderCents }: Car
             <button
               type="button"
               onClick={handleCheckout}
-              disabled={belowMinOrder}
+              disabled={belowMinOrder || isCheckingOut}
               className="flex h-12 w-full items-center justify-center rounded-full bg-primary text-sm font-bold text-onprimary transition-transform duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Fechar pedido
+              {isCheckingOut ? "Confirmando..." : "Fechar pedido"}
             </button>
             <p className="mt-2 text-center text-[11px] text-muted">
               O pedido é enviado pelo WhatsApp da loja — sem checkout online nesta fase.

@@ -29,6 +29,7 @@ export function buildOrderMessage(
   items: CartItem[],
   subtotalCents: number,
   profile: CustomerProfile,
+  deliveryFeeCents = 0,
 ): string {
   const lines: string[] = [`Olá! Quero fazer um pedido no *${storeName}*:`, ""];
 
@@ -40,7 +41,16 @@ export function buildOrderMessage(
     if (item.note) lines.push(`   Obs: ${item.note}`);
   }
 
-  lines.push("", `Total: ${formatBRL(subtotalCents)}`);
+  lines.push("");
+  if (deliveryFeeCents > 0) {
+    lines.push(
+      `Subtotal: ${formatBRL(subtotalCents)}`,
+      `Taxa de entrega: ${formatBRL(deliveryFeeCents)}`,
+      `Total: ${formatBRL(subtotalCents + deliveryFeeCents)}`,
+    );
+  } else {
+    lines.push(`Total: ${formatBRL(subtotalCents)}`);
+  }
 
   if (profile.name || profile.phone || profile.address) lines.push("");
   if (profile.name) lines.push(`Nome: ${profile.name}`);

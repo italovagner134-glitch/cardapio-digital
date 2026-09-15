@@ -80,6 +80,7 @@ export function StoreCover({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [posterFailed, setPosterFailed] = useState(false);
 
   const motionAllowed = useSyncExternalStore(
     subscribeToMotionPreference,
@@ -138,8 +139,16 @@ export function StoreCover({
           onError={() => setVideoFailed(true)}
           className="pointer-events-none size-full object-cover"
         />
-      ) : posterSrc ? (
-        <Image src={posterSrc} alt="" fill priority sizes="480px" className="object-cover" />
+      ) : posterSrc && !posterFailed ? (
+        <Image
+          src={posterSrc}
+          alt=""
+          fill
+          priority
+          sizes="480px"
+          className="object-cover"
+          onError={() => setPosterFailed(true)}
+        />
       ) : (
         <div className="relative flex size-full items-center justify-center bg-gradient-to-b from-surface to-bg">
           {logoUrl && (

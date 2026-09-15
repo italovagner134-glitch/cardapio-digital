@@ -30,7 +30,16 @@ export const getStoreBySlug = cache(async function getStoreBySlug(slug: string):
   if (!store) return null;
 
   const [{ data: settings }, { data: businessHours }] = await Promise.all([
-    supabase.from("restaurant_settings").select("*").eq("restaurant_id", store.id).maybeSingle(),
+    // M3: nunca pedir pix_key aqui — nem esta query nem `anon` no Postgres
+    // têm mais privilégio de leitura dessa coluna (revogado por migration);
+    // o dono só a edita no painel, autenticado.
+    supabase
+      .from("restaurant_settings")
+      .select(
+        "restaurant_id, accepts_delivery, accepts_pickup, accepts_dinein, ordering_enabled, min_order_cents, delivery_fee_cents, delivery_time_min, delivery_time_max, payment_methods, instagram, order_notice, has_change, created_at, updated_at",
+      )
+      .eq("restaurant_id", store.id)
+      .maybeSingle(),
     supabase
       .from("business_hours")
       .select("day_of_week, opens_at, closes_at, is_closed, position")

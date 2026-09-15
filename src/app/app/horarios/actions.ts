@@ -2,14 +2,14 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { businessHourSchema } from "@/lib/validations/restaurant";
-import { parseBusinessHoursFromForm } from "@/lib/parse-business-hours-form";
+import { multiShiftHoursSchema } from "@/lib/validations/business-hours-multi";
+import { parseMultiShiftHoursForm } from "@/lib/parse-multi-shift-hours-form";
+import type { TablesInsert } from "@/lib/supabase/types";
+
+type BusinessHourRow = TablesInsert<"business_hours">;
 
 export type UpdateBusinessHoursState = { error?: string; success?: boolean } | undefined;
-
-const businessHoursArraySchema = z.array(businessHourSchema).length(7);
 
 export async function updateBusinessHours(
   restaurantId: string,
@@ -26,44 +26,53 @@ export async function updateBusinessHours(
     redirect("/login");
   }
 
-  const parsed = businessHoursArraySchema.safeParse(parseBusinessHoursFromForm(formData));
+  const parsed = multiShiftHoursSchema.safeParse(parseMultiShiftHoursForm(formData));
 
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Verifique os horários informados." };
   }
 
-  const rows = parsed.data.map((hour) => ({
-    restaurant_id: restaurantId,
-    day_of_week: hour.dayOfWeek,
-    opens_at: hour.isClosed ? null : hour.opensAt,
-    closes_at: hour.isClosed ? null : hour.closesAt,
-    is_closed: hour.isClosed,
-    position: 0,
-  }));
+  // Uma linha por turno, `position` = a ordem do turno dentro do dia (0 =
+  // primeiro turno). Delete-e-insere as linhas do restaurante: mais simples
+  // e igual de seguro que tentar casar upsert por (dia, turno), já que o
+  // número de turnos por dia muda a cada salvamento.
+  const rows: BusinessHourRow[] = parsed.data.flatMap((day): BusinessHourRow[] => {
+    if (day.isClosed || day.shifts.length === 0) {
+      return [
+        {
+          restaurant_id: restaurantId,
+          day_of_week: day.dayOfWeek,
+          opens_at: null,
+          closes_at: null,
+          is_closed: true,
+          position: 0,
+        },
+      ];
+    }
 
-  // A tabela agora aceita mais de um turno por dia (almoço + jantar — Fase
-  // 3/Parte 4.2), então não existe mais uma unique só em
-  // (restaurant_id, day_of_week) pra fazer upsert em cima. Este formulário
-  // ainda edita só um turno por dia (campo único opensAt/closesAt
-  // compartilhado — ver parseBusinessHoursFromForm), então delete-e-insere
-  // as 7 linhas do zero é equivalente e mais simples que tentar simular
-  // upsert por (dia, turno). TODO: quando o painel ganhar edição de múltiplos
-  // turnos por dia, este action precisa aceitar N linhas por dia em vez de
-  // sempre regravar exatamente 7.
-  // RLS (business_hours_delete_owner/insert_owner) garante que só o owner
-  // deste restaurante consegue gravar — não confiamos só na tela.
-  const { error: deleteError } = await supabase
-    .from("business_hours")
-    .delete()
-    .eq("restaurant_id", restaurantId);
+    return day.shifts.map((shift, position) => ({
+      restaurant_id: restaurantId,
+      day_of_week: day.dayOfWeek,
+      opens_at: shift.opensAt,
+      closes_at: shift.closesAt,
+      is_closed: false,
+      position,
+    }));
+  });
 
-  if (deleteError) {
-    return { error: "Não foi possível salvar os horários. Tente novamente." };
-  }
+  // RPC atômica (delete+insert no mesmo transaction do lado do banco) — duas
+  // chamadas PostgREST separadas deixavam uma janela em que, se o INSERT
+  // falhasse logo depois do DELETE ter sido aplicado, o restaurante ficava
+  // sem nenhuma linha de horário (isOpenNow() trata array vazio como
+  // "sempre aberto"). RLS (business_hours_delete_owner/insert_owner)
+  // continua valendo: a função roda `security invoker`, não ganha
+  // privilégio extra.
+  const { error } = await supabase.rpc("replace_business_hours", {
+    p_restaurant_id: restaurantId,
+    p_rows: rows,
+  });
 
-  const { error: insertError } = await supabase.from("business_hours").insert(rows);
-
-  if (insertError) {
+  if (error) {
     return { error: "Não foi possível salvar os horários. Tente novamente." };
   }
 

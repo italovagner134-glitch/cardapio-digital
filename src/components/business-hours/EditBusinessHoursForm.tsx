@@ -2,22 +2,16 @@
 
 import { useActionState } from "react";
 import { Button } from "@/components/ui/button";
-import { BusinessHoursFields } from "./BusinessHoursFields";
+import { MultiShiftHoursFields } from "./MultiShiftHoursFields";
 import { updateBusinessHours, type UpdateBusinessHoursState } from "@/app/app/horarios/actions";
+import type { DayShiftsInput } from "@/lib/validations/business-hours-multi";
 
 interface EditBusinessHoursFormProps {
   restaurantId: string;
-  defaultOpensAt?: string;
-  defaultClosesAt?: string;
-  defaultOpenDays?: number[];
+  defaultDays: DayShiftsInput[];
 }
 
-export function EditBusinessHoursForm({
-  restaurantId,
-  defaultOpensAt,
-  defaultClosesAt,
-  defaultOpenDays,
-}: EditBusinessHoursFormProps) {
+export function EditBusinessHoursForm({ restaurantId, defaultDays }: EditBusinessHoursFormProps) {
   const [state, formAction, isPending] = useActionState<UpdateBusinessHoursState, FormData>(
     updateBusinessHours.bind(null, restaurantId),
     undefined,
@@ -25,11 +19,7 @@ export function EditBusinessHoursForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-6" noValidate>
-      <BusinessHoursFields
-        defaultOpensAt={defaultOpensAt}
-        defaultClosesAt={defaultClosesAt}
-        defaultOpenDays={defaultOpenDays}
-      />
+      <MultiShiftHoursFields defaultDays={defaultDays} />
 
       {state?.error && (
         <p role="alert" className="text-sm text-destructive">

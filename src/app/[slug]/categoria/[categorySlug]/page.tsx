@@ -7,6 +7,7 @@ import {
   getCategoryProductsPage,
   getLivePromotions,
 } from "@/lib/supabase/store-queries";
+import { isOpenNow } from "@/lib/business-hours";
 import { CategoryPageContent } from "./CategoryPageContent";
 
 export const revalidate = 60;
@@ -43,6 +44,9 @@ export default async function CategoryPage({ params }: PageProps) {
   const promotionByProductId = new Map(
     livePromotions.filter((promo) => promo.product_id).map((promo) => [promo.product_id as string, promo]),
   );
+  // Mesmo critério da Home/Detalhe do produto: loja fechada desabilita o
+  // "+" (G1 — antes esta tela deixava adicionar com a loja fechada).
+  const orderingDisabled = isOpenNow(bundle.businessHours) === false;
 
   return (
     <CategoryPageContent
@@ -51,6 +55,7 @@ export default async function CategoryPage({ params }: PageProps) {
       initialProducts={products}
       total={total}
       promotionByProductId={promotionByProductId}
+      orderingDisabled={orderingDisabled}
     />
   );
 }

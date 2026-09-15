@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { ImageOff } from "lucide-react";
@@ -29,6 +30,7 @@ export function PromotionCard({ promotion, product, className = "" }: PromotionC
   const percentOff = hasDiscount ? discountPercentOff(product.price_cents, finalPriceCents) : 0;
   const remaining = stockRemaining(promotion);
   const imageUrl = promotion.image_url ?? product.image_url;
+  const [imageBroken, setImageBroken] = useState(false);
 
   return (
     <button
@@ -74,8 +76,8 @@ export function PromotionCard({ promotion, product, className = "" }: PromotionC
       </div>
 
       <div className="relative w-[40%] shrink-0">
-        {imageUrl ? (
-          <Image src={imageUrl} alt="" fill sizes="200px" className="object-cover" />
+        {imageUrl && !imageBroken ? (
+          <Image src={imageUrl} alt="" fill sizes="200px" className="object-cover" onError={() => setImageBroken(true)} />
         ) : (
           <div className="flex size-full items-center justify-center bg-surface2 text-muted">
             <ImageOff size={24} aria-hidden="true" />

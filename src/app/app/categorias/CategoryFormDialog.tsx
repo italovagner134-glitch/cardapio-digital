@@ -14,8 +14,28 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CATEGORY_ICONS, type CategoryIconKey } from "@/components/store/icons";
 import { createCategory, updateCategory, type CategoryActionState } from "./actions";
 import type { Tables } from "@/lib/supabase/types";
+
+const ICON_LABELS: Record<CategoryIconKey, string> = {
+  star: "Estrela (destaque)",
+  burger: "Hambúrguer",
+  combo: "Combo",
+  chicken: "Frango",
+  drink: "Bebida",
+  dessert: "Sobremesa",
+  pizza: "Pizza",
+  icecream: "Sorvete",
+  fries: "Porção",
+  utensils: "Talheres (genérico)",
+};
+
+const DISPLAY_STYLES = [
+  { value: "list", label: "Lista (uma coluna, com imagem pequena)" },
+  { value: "carousel", label: "Carrossel (grade de cards, imagem grande)" },
+] as const;
 
 interface CategoryFormDialogProps {
   category?: Tables<"categories">;
@@ -71,6 +91,46 @@ export function CategoryFormDialog({ category, trigger }: CategoryFormDialogProp
               placeholder="Uma linha curta sobre a categoria"
               rows={2}
             />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="category-icon">Ícone</Label>
+              <Select name="iconKey" defaultValue={category?.icon_key ?? "utensils"} required>
+                <SelectTrigger id="category-icon" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(CATEGORY_ICONS) as CategoryIconKey[]).map((key) => {
+                    const Icon = CATEGORY_ICONS[key];
+                    return (
+                      <SelectItem key={key} value={key}>
+                        <span className="flex items-center gap-2">
+                          <Icon size={16} />
+                          {ICON_LABELS[key]}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="category-display-style">Estilo de exibição</Label>
+              <Select name="displayStyle" defaultValue={category?.display_style ?? "list"} required>
+                <SelectTrigger id="category-display-style" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DISPLAY_STYLES.map((style) => (
+                    <SelectItem key={style.value} value={style.value}>
+                      {style.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {state?.error && (

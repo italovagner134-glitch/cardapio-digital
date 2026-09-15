@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { EditBusinessHoursForm } from "@/components/business-hours/EditBusinessHoursForm";
+import type { DayShiftsInput } from "@/lib/validations/business-hours-multi";
 
 export const metadata: Metadata = { title: "Horários — Cardápio Digital" };
 
@@ -31,13 +32,26 @@ export default async function HorariosPage() {
 
   const { data: businessHours } = await supabase
     .from("business_hours")
-    .select("day_of_week, opens_at, closes_at, is_closed")
+    .select("day_of_week, opens_at, closes_at, is_closed, position")
     .eq("restaurant_id", membership.restaurants.id)
-    .order("day_of_week");
+    .order("day_of_week", { ascending: true })
+    .order("position", { ascending: true });
 
-  const openRows = (businessHours ?? []).filter((row) => !row.is_closed);
-  const defaultOpenDays = openRows.map((row) => row.day_of_week);
-  const representative = openRows[0];
+  const rows = businessHours ?? [];
+  const defaultDays: DayShiftsInput[] = Array.from({ length: 7 }, (_, dayOfWeek) => {
+    const dayRows = rows.filter((row) => row.day_of_week === dayOfWeek);
+    const isClosed = dayRows.length === 0 || dayRows.every((row) => row.is_closed);
+
+    return {
+      dayOfWeek,
+      isClosed,
+      shifts: isClosed
+        ? []
+        : dayRows
+            .filter((row) => !row.is_closed && row.opens_at && row.closes_at)
+            .map((row) => ({ opensAt: row.opens_at!.slice(0, 5), closesAt: row.closes_at!.slice(0, 5) })),
+    };
+  });
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-10 sm:px-8">
@@ -53,15 +67,13 @@ export default async function HorariosPage() {
         Horários de funcionamento
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">{membership.restaurants.name}</p>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Cada dia pode ter mais de um turno — útil pra quem fecha na hora do almoço e reabre à noite.
+      </p>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
         {membership.role === "owner" ? (
-          <EditBusinessHoursForm
-            restaurantId={membership.restaurants.id}
-            defaultOpensAt={representative?.opens_at?.slice(0, 5) ?? ""}
-            defaultClosesAt={representative?.closes_at?.slice(0, 5) ?? ""}
-            defaultOpenDays={defaultOpenDays.length > 0 ? defaultOpenDays : undefined}
-          />
+          <EditBusinessHoursForm restaurantId={membership.restaurants.id} defaultDays={defaultDays} />
         ) : (
           <p className="text-sm text-muted-foreground">
             Só o dono do restaurante pode alterar os horários. Peça para ele fazer essa mudança.

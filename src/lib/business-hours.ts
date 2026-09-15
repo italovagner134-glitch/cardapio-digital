@@ -150,6 +150,44 @@ function saoPauloTimeToInstant(hhmm: string, dayOffset: number, at?: Date): Date
 }
 
 /**
+ * Mesma regra acima, mas para o valor cru de um `<input type="datetime-local">`
+ * ("YYYY-MM-DDTHH:mm", com data própria em vez de "hoje + offset") — usado
+ * pelo início/fim de campanha de uma promoção. Sem isto, `new Date(valor)`
+ * no servidor interpretaria a string no fuso do PROCESSO (ex.: UTC numa
+ * função serverless), não no de São Paulo — o mesmo bug que esta timezone.ts
+ * inteira existe pra evitar, só que pela borda do formulário em vez do
+ * navegador de quem olha. `null` se a string não bater o formato esperado.
+ */
+export function saoPauloDateTimeToISO(datetimeLocal: string): string | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(datetimeLocal);
+  if (!match) return null;
+  const [, year, month, day, hour, minute] = match;
+  return new Date(
+    Date.UTC(Number(year), Number(month) - 1, Number(day), Number(hour) + SAO_PAULO_UTC_OFFSET_HOURS, Number(minute), 0),
+  ).toISOString();
+}
+
+/** Caminho inverso — um instante ISO (UTC, como vem do banco) pro valor que
+ * um `<input type="datetime-local">` espera, sempre no horário de São Paulo
+ * (não no fuso de quem está com o navegador aberto), pra editar uma
+ * promoção mostrar de volta exatamente a hora que foi salva. */
+export function isoToSaoPauloDateTimeLocal(iso: string | null): string {
+  if (!iso) return "";
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date(iso));
+
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
+}
+
+/**
  * Instante real (não só "HH:mm") em que a cozinha para de aceitar pedido —
  * horário de fechamento do turno aberto agora, menos `lastOrderOffsetMin`.
  * `null` se a loja não estiver aberta agora. Usado pelo cronômetro

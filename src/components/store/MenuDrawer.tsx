@@ -13,6 +13,7 @@ import {
   Info,
   Wallet,
   Phone,
+  Share2,
 } from "lucide-react";
 import { StoreStatusCountdown } from "./StoreStatusCountdown";
 import { CATEGORY_ICONS, UtensilsIcon, type CategoryIconKey } from "./icons";
@@ -20,6 +21,7 @@ import { routes } from "@/lib/routes";
 import { useOverlayBehavior } from "@/lib/use-overlay-behavior";
 import { useCart } from "@/lib/cart/use-cart";
 import { buildWhatsAppContactUrl } from "@/lib/whatsapp";
+import { shareUrl } from "@/lib/share";
 import type { Category, Store } from "@/types/store";
 
 interface MenuDrawerProps {
@@ -50,6 +52,7 @@ export function MenuDrawer({
   const { panelRef } = useOverlayBehavior(open, onClose);
   const dragStartX = useRef<number | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
+  const [logoBroken, setLogoBroken] = useState(false);
 
   if (!open) return null;
 
@@ -86,6 +89,14 @@ export function MenuDrawer({
     },
     { label: "Informações da loja", icon: Info, onClick: () => { onClose(); onOpenInfo(); } },
     { label: "Formas de pagamento", icon: Wallet, onClick: () => { onClose(); onOpenInfo(); } },
+    {
+      label: "Compartilhar cardápio",
+      icon: Share2,
+      onClick: () => {
+        onClose();
+        shareUrl(routes.home(store.slug), store.name, `Confira o cardápio de ${store.name}`);
+      },
+    },
   ];
 
   return (
@@ -106,8 +117,15 @@ export function MenuDrawer({
       >
         <div className="flex items-start justify-between gap-2 px-5 pb-4 pt-6">
           <div className="flex min-w-0 items-center gap-3">
-            {store.logo_url ? (
-              <Image src={store.logo_url} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" />
+            {store.logo_url && !logoBroken ? (
+              <Image
+                src={store.logo_url}
+                alt=""
+                width={40}
+                height={40}
+                className="size-10 shrink-0 rounded-full object-cover"
+                onError={() => setLogoBroken(true)}
+              />
             ) : (
               <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface2 text-sm font-bold text-muted">
                 {store.name.charAt(0)}

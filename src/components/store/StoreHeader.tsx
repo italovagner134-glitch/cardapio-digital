@@ -1,6 +1,6 @@
 "use client";
 
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -39,6 +39,7 @@ export function StoreHeader({ storeName, logoUrl }: StoreHeaderProps) {
   const { slug } = useStoreRef();
   const { openMenu } = useStoreOverlays();
   const cart = useCart();
+  const [logoBroken, setLogoBroken] = useState(false);
 
   function handleLogoClick() {
     // Na home, a logo rola pro topo (Parte 7); em qualquer outra tela,
@@ -96,7 +97,7 @@ export function StoreHeader({ storeName, logoUrl }: StoreHeaderProps) {
         aria-label={`Ir para o início de ${storeName}`}
         className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
       >
-        {logoUrl ? (
+        {logoUrl && !logoBroken ? (
           <Image
             src={logoUrl}
             alt={storeName}
@@ -104,6 +105,7 @@ export function StoreHeader({ storeName, logoUrl }: StoreHeaderProps) {
             height={40}
             priority
             className="h-10 w-auto object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)]"
+            onError={() => setLogoBroken(true)}
           />
         ) : (
           <LogoPlaceholder

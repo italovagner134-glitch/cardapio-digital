@@ -1,8 +1,13 @@
 import { z } from "zod";
+import { CATEGORY_ICONS, type CategoryIconKey } from "@/components/store/icons";
+
+const CATEGORY_ICON_KEYS = Object.keys(CATEGORY_ICONS) as [CategoryIconKey, ...CategoryIconKey[]];
 
 export const categorySchema = z.object({
   name: z.string().trim().min(2, "Digite o nome da categoria.").max(80),
   description: z.string().trim().max(300).optional().or(z.literal("")),
+  iconKey: z.enum(CATEGORY_ICON_KEYS),
+  displayStyle: z.enum(["list", "carousel"]),
 });
 
 export type CategoryInput = z.infer<typeof categorySchema>;

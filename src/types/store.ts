@@ -26,6 +26,10 @@ export type BusinessHourRow = Pick<
   "day_of_week" | "opens_at" | "closes_at" | "is_closed" | "position"
 >;
 
-export type StoreSettings = Tables<"restaurant_settings">;
+/** M3: `pix_key` fica de fora do tipo público de propósito — a loja pública
+ * (getStoreBySlug) nunca lê essa coluna; o dono edita o Pix dele só no
+ * painel (app/app/configuracoes), que usa `Tables<"restaurant_settings">`
+ * completo, não este tipo. */
+export type StoreSettings = Omit<Tables<"restaurant_settings">, "pix_key">;
 
 export type Promotion = Tables<"promotions">;

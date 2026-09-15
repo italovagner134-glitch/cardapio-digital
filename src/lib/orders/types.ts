@@ -13,5 +13,8 @@ export interface Order {
   createdAt: string;
   items: CartItem[];
   subtotalCents: number;
+  /** Opcional pra não quebrar leitura de pedidos salvos antes da taxa de
+   * entrega existir (Fase 3) — trate ausência como 0 na exibição. */
+  deliveryFeeCents?: number;
   status: "enviado";
 }

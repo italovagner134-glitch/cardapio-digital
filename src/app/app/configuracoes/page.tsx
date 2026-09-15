@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { ArrowLeft } from "lucide-react";
 import { requireRestaurant } from "@/lib/restaurant-context";
 import { SettingsForm } from "./SettingsForm";
+import { AddressForm } from "./AddressForm";
 
 export const metadata: Metadata = { title: "Configurações — Cardápio Digital" };
 
@@ -30,6 +31,10 @@ export default async function ConfiguracoesPage() {
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
         <SettingsForm settings={settings} />
+      </div>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <AddressForm restaurant={restaurant} />
       </div>
     </div>
   );
