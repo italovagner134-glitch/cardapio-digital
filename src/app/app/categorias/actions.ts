@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRestaurant } from "@/lib/restaurant-context";
+import { requireRestaurant, requireRestaurantForCreate } from "@/lib/restaurant-context";
 import { categorySchema } from "@/lib/validations/menu";
 import { slugify } from "@/lib/slugify";
+import { rateLimitMessage } from "@/lib/rate-limit";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -50,7 +51,10 @@ export async function createCategory(
   _prevState: CategoryActionState,
   formData: FormData,
 ): Promise<CategoryActionState> {
-  const { supabase, restaurant } = await requireRestaurant();
+  const { supabase, restaurant, rateLimited } = await requireRestaurantForCreate("category");
+  if (rateLimited) {
+    return { error: rateLimitMessage() };
+  }
 
   const parsed = parseCategoryForm(formData);
   if (!parsed.success) {

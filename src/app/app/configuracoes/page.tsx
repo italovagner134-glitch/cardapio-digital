@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import { requireRestaurant } from "@/lib/restaurant-context";
 import { SettingsForm } from "./SettingsForm";
 import { AddressForm } from "./AddressForm";
+import { CoverForm } from "./CoverForm";
 
 export const metadata: Metadata = { title: "Configurações — Cardápio Digital" };
 
@@ -28,6 +29,10 @@ export default async function ConfiguracoesPage() {
 
       <h1 className="mt-4 font-heading text-2xl font-semibold text-foreground">Configurações</h1>
       <p className="mt-1 text-sm text-muted-foreground">{restaurant.name}</p>
+
+      <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <CoverForm restaurant={restaurant} />
+      </div>
 
       <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm">
         <SettingsForm settings={settings} />

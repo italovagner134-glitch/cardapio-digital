@@ -1,6 +1,7 @@
 "use server";
 
 import { getCategoryProductsPage, type CategorySort } from "@/lib/supabase/store-queries";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import type { Product } from "@/types/store";
 
 /** Página seguinte de produtos da categoria (Parte 2.2: paginação
@@ -12,5 +13,14 @@ export async function loadCategoryProducts(
   offset: number,
   limit: number,
 ): Promise<{ products: Product[]; total: number }> {
+  // Limite mais folgado que o do carrinho — rolagem infinita numa categoria
+  // grande liga isto várias vezes seguidas de propósito; ainda barra um bot
+  // raspando o catálogo inteiro em rajada.
+  const ip = await getClientIp();
+  const { success } = await checkRateLimit(`category-page:ip:${ip}`, { limit: 60, windowSeconds: 60 });
+  if (!success) {
+    return { products: [], total: 0 };
+  }
+
   return getCategoryProductsPage(categoryId, { sort, limit, offset });
 }

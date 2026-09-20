@@ -18,6 +18,15 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_SUPABASE_URL: supabaseUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: supabasePublishableKey,
   },
+  experimental: {
+    serverActions: {
+      // Teto do REQUEST inteiro, antes até de qualquer validação de
+      // arquivo rodar (src/lib/uploads.ts) — maior upload aceito é vídeo de
+      // capa (10MB); a folga cobre o overhead do multipart/os outros campos
+      // do mesmo formulário.
+      bodySizeLimit: "12mb",
+    },
+  },
   images: {
     remotePatterns: [
       {

@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRestaurant } from "@/lib/restaurant-context";
+import { requireRestaurant, requireRestaurantForCreate } from "@/lib/restaurant-context";
 import { productSchema, optionGroupSchema, optionSchema } from "@/lib/validations/menu";
 import { slugify } from "@/lib/slugify";
+import { rateLimitMessage } from "@/lib/rate-limit";
+import { validateUpload } from "@/lib/uploads";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
@@ -11,7 +13,6 @@ export type ProductActionState = { error?: string; success?: boolean } | undefin
 export type OptionGroupActionState = { error?: string; success?: boolean } | undefined;
 export type OptionActionState = { error?: string; success?: boolean } | undefined;
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_SLUG_ATTEMPTS = 20;
 
 function parseProductForm(formData: FormData) {
@@ -61,10 +62,12 @@ async function uploadProductImage(
   productId: string,
   file: FormDataEntryValue | null,
 ): Promise<string | undefined> {
-  if (!(file instanceof File) || file.size === 0 || file.size > MAX_IMAGE_BYTES) return undefined;
+  if (!(file instanceof File) || file.size === 0) return undefined;
 
-  const extension = file.name.split(".").pop() || "jpg";
-  const path = `${restaurantId}/products/${productId}.${extension}`;
+  const validation = await validateUpload(file, "image");
+  if (!validation.ok) return undefined;
+
+  const path = `${restaurantId}/products/${productId}.${validation.extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("restaurant-media")
@@ -80,7 +83,10 @@ export async function createProduct(
   _prevState: ProductActionState,
   formData: FormData,
 ): Promise<ProductActionState> {
-  const { supabase, restaurant } = await requireRestaurant();
+  const { supabase, restaurant, rateLimited } = await requireRestaurantForCreate("product");
+  if (rateLimited) {
+    return { error: rateLimitMessage() };
+  }
 
   const parsed = parseProductForm(formData);
   if (!parsed.success) {

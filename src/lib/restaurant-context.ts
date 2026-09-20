@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit } from "@/lib/rate-limit";
 import type { Tables, Enums } from "@/lib/supabase/types";
 
 export interface RestaurantMembership {
@@ -37,4 +38,29 @@ export async function requireRestaurant(): Promise<RestaurantMembership> {
   }
 
   return { supabase, restaurant: membership.restaurants, role: membership.role };
+}
+
+/**
+ * `requireRestaurant()` + rate limit — só pra ações que CRIAM registro
+ * novo (categoria, promoção, produto). Fica separado de `requireRestaurant`
+ * de propósito: aquele também gate toda página do painel, e limitar
+ * navegação normal (abrir /app/categorias várias vezes) não faz sentido —
+ * aqui é só o clique real de "criar", que uma sessão comprometida/script
+ * poderia usar pra inundar o cardápio público de registro falso.
+ *
+ * `rateLimited` fica pro chamador decidir como mostrar o erro — cada
+ * action tem seu próprio formato de ActionState, então este helper não
+ * tenta devolver um `{error}` genérico.
+ */
+export async function requireRestaurantForCreate(
+  kind: string,
+): Promise<RestaurantMembership & { rateLimited: boolean }> {
+  const membership = await requireRestaurant();
+
+  const { success } = await checkRateLimit(`create-${kind}:user:${membership.restaurant.id}`, {
+    limit: 20,
+    windowSeconds: 60,
+  });
+
+  return { ...membership, rateLimited: !success };
 }

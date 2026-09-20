@@ -1,9 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireRestaurant } from "@/lib/restaurant-context";
+import { requireRestaurant, requireRestaurantForCreate } from "@/lib/restaurant-context";
 import { promotionSchema } from "@/lib/validations/promotions";
 import { saoPauloDateTimeToISO } from "@/lib/business-hours";
+import { rateLimitMessage } from "@/lib/rate-limit";
 
 export type PromotionActionState = { error?: string; success?: boolean } | undefined;
 
@@ -39,7 +40,10 @@ export async function createPromotion(
   _prevState: PromotionActionState,
   formData: FormData,
 ): Promise<PromotionActionState> {
-  const { supabase, restaurant } = await requireRestaurant();
+  const { supabase, restaurant, rateLimited } = await requireRestaurantForCreate("promotion");
+  if (rateLimited) {
+    return { error: rateLimitMessage() };
+  }
 
   const parsed = parsePromotionForm(formData);
   if (!parsed.success) {

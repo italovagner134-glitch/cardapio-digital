@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signUpSchema } from "@/lib/validations/auth";
+import { checkRateLimit, getClientIp, rateLimitMessage } from "@/lib/rate-limit";
 
 export type SignUpActionState =
   | { status: "idle" }
@@ -22,6 +23,17 @@ export async function signUp(
 
   if (!parsed.success) {
     return { status: "error", error: parsed.error.issues[0]?.message ?? "Verifique os dados informados." };
+  }
+
+  // Criar conta é mais barato de abusar em massa do que logar — janela mais
+  // longa, limite mais apertado.
+  const ip = await getClientIp();
+  const { success, retryAfterSeconds } = await checkRateLimit(`signup:ip:${ip}`, {
+    limit: 3,
+    windowSeconds: 3600,
+  });
+  if (!success) {
+    return { status: "error", error: rateLimitMessage(retryAfterSeconds) };
   }
 
   const supabase = await createClient();

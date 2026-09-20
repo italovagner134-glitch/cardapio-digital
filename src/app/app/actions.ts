@@ -5,12 +5,12 @@ import { createClient } from "@/lib/supabase/server";
 import { restaurantOnboardingSchema } from "@/lib/validations/restaurant";
 import { parseBusinessHoursFromForm } from "@/lib/parse-business-hours-form";
 import { slugify } from "@/lib/slugify";
+import { validateUpload } from "@/lib/uploads";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/lib/supabase/types";
 
 export type OnboardingActionState = { error?: string } | undefined;
 
-const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_SLUG_ATTEMPTS = 20;
 
 export async function createRestaurant(
@@ -94,10 +94,12 @@ async function uploadOptionalImage(
   file: FormDataEntryValue | null,
   kind: "logo" | "cover",
 ) {
-  if (!(file instanceof File) || file.size === 0 || file.size > MAX_IMAGE_BYTES) return;
+  if (!(file instanceof File) || file.size === 0) return;
 
-  const extension = file.name.split(".").pop() || "jpg";
-  const path = `${restaurantId}/${kind}.${extension}`;
+  const validation = await validateUpload(file, "image");
+  if (!validation.ok) return;
+
+  const path = `${restaurantId}/${kind}.${validation.extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("restaurant-media")

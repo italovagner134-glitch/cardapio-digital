@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLivePromotions } from "@/lib/supabase/store-queries";
 import { applyDiscount } from "@/lib/promotions";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export interface CartPriceCheck {
   productId: string;
@@ -28,6 +29,17 @@ export interface CartPriceCheck {
 export async function checkCartPrices(restaurantId: string, productIds: string[]): Promise<CartPriceCheck[]> {
   const uniqueIds = [...new Set(productIds)];
   if (uniqueIds.length === 0) return [];
+
+  // Ação pública sem sessão — um cliente real chama isto no máximo umas
+  // poucas vezes por visita (entrada no carrinho + clique de fechar
+  // pedido); acima disso é script martelando a rota. Os dois chamadores
+  // (efeito de entrada e handleCheckout, em CartPageContent.tsx) já tratam
+  // rejeição da Promise, então lançar aqui é seguro.
+  const ip = await getClientIp();
+  const { success } = await checkRateLimit(`cart-check:ip:${ip}`, { limit: 30, windowSeconds: 60 });
+  if (!success) {
+    throw new Error("Muitas tentativas em pouco tempo. Espere um instante e tente de novo.");
+  }
 
   const supabase = await createClient();
 
