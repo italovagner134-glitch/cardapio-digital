@@ -25,7 +25,7 @@ export async function signIn(
   // sozinha não cobre os dois jeitos de força bruta.
   const ip = await getClientIp();
   const [byIp, byEmail] = await Promise.all([
-    checkRateLimit(`login:ip:${ip}`, { limit: 10, windowSeconds: 600 }),
+    checkRateLimit(`login:ip:${ip}`, { limit: 5, windowSeconds: 900 }),
     checkRateLimit(`login:email:${parsed.data.email.toLowerCase()}`, { limit: 5, windowSeconds: 900 }),
   ]);
 
